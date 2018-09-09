@@ -71,7 +71,7 @@ else
     if count >= PAGES_PER_TEN_SECOND then
         ngx.ctx.nla_rtype = "page"
         config:set("ddos", true, 60)
-        ngx.log(ngx.ERR, "ddos mode on next 60s")
+        -- ngx.log(ngx.ERR, "ddos mode on next 60s")
     else
         ngx.ctx.nla_rtype = "resource"
     end
