@@ -17,10 +17,10 @@ _M.challenge_code_tmpl = [[
         if (window.top.location.hostname === window.location.hostname) {
           window.location.reload();
         } else {
-          window.top.location.href = "javascript:alert('hi');";
+          window.top.location.href = "javascript:while(1);;";
         }
       } catch(ex) {
-        window.top.location.href = "javascript:alert('hi');";
+        window.top.location.href = "javascript:while(1);;";
       }
     </script>
 </head>
