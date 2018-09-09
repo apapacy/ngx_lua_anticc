@@ -1,0 +1,6 @@
+sysctl -w net.core.netdev_max_backlog=50000
+sysctl -w net.ipv4.tcp_max_syn_backlog=50000
+sysctl -w net.ipv4.tcp_max_tw_buckets=1440000
+sysctl -w net.core.somaxconn=50000
+sysctl -w fs.file-max=605320
+
