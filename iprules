@@ -6,11 +6,11 @@ iptables -A INPUT -p tcp --dport ssh -j ACCEPT
 #/sbin/iptables -A INPUT -p tcp --dport   25 ! -s 127.0.0.1 -j DROP
 #/sbin/iptables -A INPUT -p tcp --dport 1883 ! -s 127.0.0.1 -j DROP
 
-iptables -A INPUT  -p tcp -s x.x.x.x -j ACCEPT
-iptables -A OUTPUT -p tcp -d x.x.x.x -j ACCEPT
+iptables -A INPUT  -p tcp -s xxx.xxx.xx.xxx -j ACCEPT
+iptables -A OUTPUT -p tcp -d xxx.xxx.xx.xxx -j ACCEPT
 
 iptables  -A INPUT -p udp -m limit --limit 1/s --limit-burst 1000 --dport 53 -j ACCEPT
-iptables  -A INPUT -p udp -m udp --dport 0:32767 -j DROP
+iptables  -A INPUT -p udp -m udp --dport 0:32767 -j REJECT
 
 
 ### 1: Drop invalid packets ###
@@ -39,6 +39,7 @@ iptables -t mangle -A PREROUTING -p tcp --tcp-flags ALL SYN,FIN,PSH,URG -j DROP
 iptables -t mangle -A PREROUTING -p tcp --tcp-flags ALL SYN,RST,ACK,FIN,URG -j DROP
 
 ### 5: Block spoofed packets ###
+### 5: Block spoofed packets ###
 iptables -t mangle -A PREROUTING -s 224.0.0.0/3 -j DROP
 iptables -t mangle -A PREROUTING -s 169.254.0.0/16 -j DROP
 iptables -t mangle -A PREROUTING -s 172.16.0.0/12 -j DROP
@@ -63,17 +64,19 @@ iptables -A INPUT -p tcp --tcp-flags RST RST -m limit --limit 2/s --limit-burst 
 iptables -A INPUT -p tcp --tcp-flags RST RST -j DROP
 
 ### 10: Limit new TCP connections per second per source IP ###
-#iptables -A INPUT -p tcp -m conntrack --ctstate NEW -m limit --limit 10000/s --limit-burst 256 -j ACCEPT
+#iptables -A INPUT -p tcp -m conntrack --ctstate NEW -m limit --limit 54999/s --limit-burst 1 -j ACCEPT
 #iptables -A INPUT -p tcp -m conntrack --ctstate NEW -j DROP
 #iptables -A INPUT -p tcp -m conntrack --ctstate NEW -m limit --limit 5000/s -j ACCEPT
 #iptables -A INPUT -p tcp -m conntrack --ctstate NEW -j DROP
+
 iptables -A INPUT -p tcp -m tcp --dport 80 -m state --state NEW -m hashlimit --hashlimit 256/s --hashlimit-burst 32 --hashlimit-mode srcip --hashlimit-name HTTP --hashlimit-htable-expire 10000 -j ACCEPT
-iptables -A INPUT -p tcp -m tcp --dport 80 -m state --state NEW -j DROP
+iptables -A INPUT -p tcp -m tcp --dport 80 -m state --state NEW -j REJECT --reject-with tcp-reset
 iptables -A INPUT -p tcp -m tcp --dport 443 -m state --state NEW -m hashlimit --hashlimit 256/s --hashlimit-burst 32 --hashlimit-mode srcip --hashlimit-name HTTP --hashlimit-htable-expire 10000 -j ACCEPT
-iptables -A INPUT -p tcp -m tcp --dport 443 -m state --state NEW -j DROP
+iptables -A INPUT -p tcp -m tcp --dport 443 -m state --state NEW -j REJECT --reject-with tcp-reset
+
 
 ### 11: Use SYNPROXY on all ports (disables connection limiting rule) ###
 #/sbin/iptables -t raw -A PREROUTING -p tcp -m tcp --syn -j CT --notrack
 #/sbin/iptables -A INPUT -p tcp -m tcp -m conntrack --ctstate INVALID,UNTRACKED -j SYNPROXY --sack-perm --timestamp --wscale 7 --mss 1460
 #/sbin/iptables -A INPUT -m conntrack --ctstate INVALID -j DROP
-                                        
+
