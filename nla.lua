@@ -11,6 +11,7 @@ local headers = ngx.req.get_headers();
 -- wp ddos
 if type(headers["User-Agent"]) ~= "string"
     or headers["User-Agent"] == ""
+    or ngx.re.find(headers["User-Agent"], "^PHP", "ioj") 
     or ngx.re.find(headers["User-Agent"], "^WordPress", "ioj") then
     ngx.log(ngx.ERR, "ddos")
     ngx.exit(444)
