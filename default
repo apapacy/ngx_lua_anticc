@@ -13,7 +13,6 @@ server {
     add_header Strict-Transport-Security max-age=15768000;
     root /var/www/html;
     index index.html index.htm index.nginx-debian.html;
-    server_name 137.74.4.210;
     location / {
             try_files $uri $uri/ =404;
     }
