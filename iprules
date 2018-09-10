@@ -14,13 +14,13 @@ iptables  -A INPUT -p udp -m udp --dport 0:32767 -j REJECT
 
 
 ### 1: Drop invalid packets ###
-#iptables -t mangle -A PREROUTING -m conntrack --ctstate INVALID -j DROP
+iptables -t mangle -A PREROUTING -m conntrack --ctstate INVALID -j DROP
 
 ### 2: Drop TCP packets that are new and are not SYN ###
-#iptables -t mangle -A PREROUTING -p tcp ! --syn -m conntrack --ctstate NEW -j DROP
+iptables -t mangle -A PREROUTING -p tcp ! --syn -m conntrack --ctstate NEW -j DROP
 
 ### 3: Drop SYN packets with suspicious MSS value ###
-#iptables -t mangle -A PREROUTING -p tcp -m conntrack --ctstate NEW -m tcpmss ! --mss 536:65535 -j DROP
+iptables -t mangle -A PREROUTING -p tcp -m conntrack --ctstate NEW -m tcpmss ! --mss 536:65535 -j DROP
 
 ### 4: Block packets with bogus TCP flags ###
 iptables -t mangle -A PREROUTING -p tcp --tcp-flags FIN,SYN,RST,PSH,ACK,URG NONE -j DROP
@@ -57,11 +57,11 @@ iptables -t mangle -A PREROUTING -p icmp -j DROP
 iptables -t mangle -A PREROUTING -f -j DROP
 
 ### 8: Limit connections per source IP ###
-iptables -A INPUT -p tcp -m connlimit --connlimit-above 256 -j REJECT --reject-with tcp-reset
+iptables -A INPUT -p tcp -m connlimit --connlimit-above 256 -j DROP
 
 ### 9: Limit RST packets ###
-iptables -A INPUT -p tcp --tcp-flags RST RST -m limit --limit 2/s --limit-burst 2 -j ACCEPT
-iptables -A INPUT -p tcp --tcp-flags RST RST -j DROP
+#iptables -A INPUT -p tcp --tcp-flags RST RST -m limit --limit 2/s --limit-burst 2 -j ACCEPT
+#iptables -A INPUT -p tcp --tcp-flags RST RST -j DROP
 
 ### 10: Limit new TCP connections per second per source IP ###
 #iptables -A INPUT -p tcp -m conntrack --ctstate NEW -m limit --limit 54999/s --limit-burst 1 -j ACCEPT
@@ -69,10 +69,10 @@ iptables -A INPUT -p tcp --tcp-flags RST RST -j DROP
 #iptables -A INPUT -p tcp -m conntrack --ctstate NEW -m limit --limit 5000/s -j ACCEPT
 #iptables -A INPUT -p tcp -m conntrack --ctstate NEW -j DROP
 
-iptables -A INPUT -p tcp -m tcp --dport 80 -m state --state NEW -m hashlimit --hashlimit 256/s --hashlimit-burst 32 --hashlimit-mode srcip --hashlimit-name HTTP --hashlimit-htable-expire 10000 -j ACCEPT
-iptables -A INPUT -p tcp -m tcp --dport 80 -m state --state NEW -j REJECT --reject-with tcp-reset
-iptables -A INPUT -p tcp -m tcp --dport 443 -m state --state NEW -m hashlimit --hashlimit 256/s --hashlimit-burst 32 --hashlimit-mode srcip --hashlimit-name HTTP --hashlimit-htable-expire 10000 -j ACCEPT
-iptables -A INPUT -p tcp -m tcp --dport 443 -m state --state NEW -j REJECT --reject-with tcp-reset
+iptables -A INPUT -p tcp -m tcp --dport 80 -m state --state NEW -m hashlimit --hashlimit 8/s --hashlimit-burst 256 --hashlimit-mode srcip --hashlimit-name HTTP --hashlimit-htable-expire 60000 -j ACCEPT
+iptables -A INPUT -p tcp -m tcp --dport 80 -m state --state NEW -j DROP
+iptables -A INPUT -p tcp -m tcp --dport 443 -m state --state NEW -m hashlimit --hashlimit 8/s --hashlimit-burst 256 --hashlimit-mode srcip --hashlimit-name HTTP --hashlimit-htable-expire 60000 -j ACCEPT
+iptables -A INPUT -p tcp -m tcp --dport 443 -m state --state NEW -j DROP
 
 
 ### 11: Use SYNPROXY on all ports (disables connection limiting rule) ###
