@@ -58,7 +58,7 @@ local PAGES_PER_TEN_SECOND = config:get("pages_per_ten_second")
 -- identify if request is page or resource
 local is_page
 if ngx.re.find(ngx.var.uri, "\\/.*?\\.[a-z]+($|\\?|#)", "ioj") 
-    and not ngx.re.find(ngx.var.uri, "\\/.*?\\.(html|htm|php|py|pl|asp|aspx|ashx)($|\\?|#)", "ioj") then
+    and not ngx.re.find(ngx.var.uri, "\\/.*?\\.(html|htm|php|py|pl|asp|aspx|ashx|json|xml)($|\\?|#)", "ioj") then
     ngx.ctx.nla_rtype = "resource"
     is_page = false
 else
@@ -71,7 +71,7 @@ else
     if count >= PAGES_PER_TEN_SECOND then
         ngx.ctx.nla_rtype = "page"
         config:set("ddos", true, 60)
-        -- ngx.log(ngx.ERR, "ddos mode on next 60s")
+        ngx.log(ngx.ERR, "ddos mode on next 60s")
     else
         ngx.ctx.nla_rtype = "resource"
     end
