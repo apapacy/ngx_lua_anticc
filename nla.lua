@@ -129,11 +129,11 @@ end
 if cookies[COOKIE_NAME] ~= ngx.md5(user_id) then
     local count, err = banlist:incr(cookies[COOKIE_NAME], 1)
     if not count then
-        banlist:set(cookies[COOKIE_NAME], 1, ROTATE_AFTER_SECOND * 2)
+        banlist:set(cookies[COOKIE_NAME], 1, ROTATE_AFTER_SECOND * 4)
         count = 1
     end
-    if count >= 1024 then
-        if count == 1024 then
+    if count >= 256 then
+        if count == 256 then
             ngx.log(ngx.ERR, "client banned by bad sid")
         end
         ngx.exit(444)
