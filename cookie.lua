@@ -48,7 +48,7 @@ function _M.challenge(cookie_name, cookie_value, cookie_sid, sid)
     -- if static resource is requested, use Set-Cookie and 302 to challenge
     if ngx.ctx.nla_rtype == "resource"
         or ngx.var.request_method ~= "GET"
-        or ngx.re.find(ngx.var.uri, "\\/.*?\\.(json|xml)($|\\?|#)", "ioj")
+        or ngx.re.find(ngx.var.uri, "\\/.*?\\.(json|xml|js)($|\\?|#)", "ioj")
         or headers["X-Requested-With"] == "XMLHttpRequest" then
         add_cookie(cookie_name .. "=" .. ngx.md5(cookie_value) .. ";Path=/;Max-age=99999999")
         add_cookie(cookie_sid .. "=" .. sid .. ";Path=/;Max-age=99999999")
