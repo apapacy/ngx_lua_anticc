@@ -149,8 +149,8 @@ if is_page then
         page_count:set(network_id, 1, 1)
         count = 1
     end
-    if count >= 16 then
-        if count == 16 then
+    if count >= 32 then
+        if count == 32 then
             ngx.log(ngx.ERR, "client banned by network on page")
         end
         ngx.exit(444)
