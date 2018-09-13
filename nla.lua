@@ -100,6 +100,7 @@ end
 -- session tokens
 local user_id = ngx.encode_base64(ngx.sha1_bin(ngx.var.remote_addr .. ngx.var.hostname .. (headers["User-Agent"] or "") .. COOKIE_KEY .. sid))
 local network_id = ngx.md5(ngx.var.remote_addr .. ngx.var.hostname .. (headers["User-Agent"] or ""))
+local remote_id = ngx.md5(ngx.var.remote_addr)
 
 local count, err = req_count:incr(ngx.md5(user_id), 1)
 if not count then
@@ -109,7 +110,19 @@ end
 
 -- counter from ip
 if not cookies[COOKIE_NAME] then
-    local count, err = net_count:incr(network_id, 1)
+   local count, err = net_count:incr(remote_id, 1)
+    if not count then
+        net_count:set(remote_id, 1, 60)
+        count = 1
+    end
+    if count >= 256 then
+        if count == 256 then
+            ngx.log(ngx.ERR, "client banned by remote address")
+        end
+        ngx.exit(444)
+        return
+    end
+    count, err = net_count:incr(network_id, 1)
     if not count then
         net_count:set(network_id, 1, 3600)
         count = 1
@@ -144,13 +157,25 @@ if cookies[COOKIE_NAME] ~= ngx.md5(user_id) then
 end
 
 if is_page then
-    local count, err = page_count:incr(network_id, 1)
+   local count, err = page_count:incr(remote_id, 1)
+    if not count then
+        page_count:set(remote_id, 1, 1)
+        count = 1
+    end
+    if count >= 48 then
+        if count == 48 then
+            ngx.log(ngx.ERR, "client banned by remote on page")
+        end
+        ngx.exit(444)
+        return
+    end
+    count, err = page_count:incr(network_id, 1)
     if not count then
         page_count:set(network_id, 1, 1)
         count = 1
     end
-    if count >= 32 then
-        if count == 32 then
+    if count >= 24 then
+        if count == 24 then
             ngx.log(ngx.ERR, "client banned by network on page")
         end
         ngx.exit(444)
