@@ -24,11 +24,11 @@ local app_requests = "app:request:count:per:10:s"
 if ngx.re.find(headers["User-Agent"], "Google Page Speed Insights|Googlebot|baiduspider|twitterbot|facebookexternalhit|rogerbot|linkedinbot|embedly|quora link preview|showyoubot|outbrain|pinterest|slackbot|vkShare|W3C_Validator|YandexBot|AdsBot-Google|bingbot|UptimeRobot|PrivatMarket|COMODO DCV", "ioj") then
     local count, err = banlist:incr(search_bot, 1)
     if not count then
-        banlist:set(search_bot, 1, 10)
+        banlist:set(search_bot, 1, 30)
         count = 1
     end
-    if count >= 50 then
-        if count == 50 then
+    if count >= 20 then
+        if count == 20 then
             ngx.log(ngx.ERR, "bot banned")
         end
         ngx.exit(444)
@@ -71,7 +71,7 @@ else
     if count >= PAGES_PER_TEN_SECOND then
         ngx.ctx.nla_rtype = "page"
         config:set("ddos", true, 60)
-        ngx.log(ngx.ERR, "ddos mode on next 60s")
+        -- ngx.log(ngx.ERR, "ddos mode on next 60s")
     else
         ngx.ctx.nla_rtype = "resource"
     end
@@ -174,8 +174,8 @@ if is_page then
         page_count:set(network_id, 1, 1)
         count = 1
     end
-    if count >= 24 then
-        if count == 24 then
+    if count >= 32 then
+        if count == 32 then
             ngx.log(ngx.ERR, "client banned by network on page")
         end
         ngx.exit(444)
