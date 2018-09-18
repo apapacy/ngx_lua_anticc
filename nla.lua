@@ -142,11 +142,11 @@ end
 if cookies[COOKIE_NAME] ~= ngx.md5(user_id) then
     local count, err = banlist:incr(cookies[COOKIE_NAME], 1)
     if not count then
-        banlist:set(cookies[COOKIE_NAME], 1, ROTATE_AFTER_SECOND * 4)
+        banlist:set(cookies[COOKIE_NAME], 1, ROTATE_AFTER_SECOND * 2)
         count = 1
     end
-    if count >= 256 then
-        if count == 256 then
+    if count >= 1024 then
+        if count == 1024 then
             ngx.log(ngx.ERR, "client banned by bad sid")
         end
         ngx.exit(444)
@@ -156,32 +156,32 @@ if cookies[COOKIE_NAME] ~= ngx.md5(user_id) then
     return
 end
 
-if is_page then
-   local count, err = page_count:incr(remote_id, 1)
-    if not count then
-        page_count:set(remote_id, 1, 1)
-        count = 1
-    end
-    if count >= 48 then
-        if count == 48 then
-            ngx.log(ngx.ERR, "client banned by remote on page")
-        end
-        ngx.exit(444)
-        return
-    end
-    count, err = page_count:incr(network_id, 1)
-    if not count then
-        page_count:set(network_id, 1, 1)
-        count = 1
-    end
-    if count >= 32 then
-        if count == 32 then
-            ngx.log(ngx.ERR, "client banned by network on page")
-        end
-        ngx.exit(444)
-        return
-    end
-end
+--if is_page then
+--   local count, err = page_count:incr(remote_id, 1)
+--    if not count then
+--        page_count:set(remote_id, 1, 1)
+--        count = 1
+--    end
+--    if count >= 64 then
+--        if count == 64 then
+--            ngx.log(ngx.ERR, "client banned by remote on page")
+--        end
+--        ngx.exit(444)
+--        return
+--    end
+--    count, err = page_count:incr(network_id, 1)
+--    if not count then
+--        page_count:set(network_id, 1, 1)
+--        count = 1
+--    end
+--    if count >= 48 then
+--        if count == 48 then
+--            ngx.log(ngx.ERR, "client banned by network on page")
+--        end
+--        ngx.exit(444)
+--        return
+--    end
+--end
 
 
 -- counter from sid
