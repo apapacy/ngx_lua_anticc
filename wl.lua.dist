@@ -1,0 +1,9 @@
+-- whitelist conf
+local whitelist = ngx.shared.nla_whitelist
+whitelist:add("x.x.x.x", true)
+whitelist:add("x.x.x.x", true)
+whitelist:add("x.x.x.x", true)
+whitelist:add("x.x.x.x", true)
+
+ngx.log(ngx.ERR, "*** whitelist initialized ***")
+
