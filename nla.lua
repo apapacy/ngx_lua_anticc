@@ -21,14 +21,14 @@ end
 local banlist = ngx.shared.nla_banlist
 local search_bot = "search:bot:count:request:per:10:s"
 local app_requests = "app:request:count:per:10:s"
-if ngx.re.find(headers["User-Agent"], "Google Page Speed Insights|Googlebot|baiduspider|twitterbot|facebookexternalhit|rogerbot|linkedinbot|embedly|quora link preview|showyoubot|outbrain|pinterest|slackbot|vkShare|W3C_Validator|YandexBot|AdsBot-Google|bingbot|UptimeRobot|PrivatMarket|COMODO DCV|bingbot|Google-Site-Verification", "ioj") then
+if ngx.re.find(headers["User-Agent"], "Google Page Speed Insights|Googlebot|baiduspider|twitterbot|facebookexternalhit|rogerbot|linkedinbot|embedly|quora link preview|showyoubot|outbrain|pinterest|slackbot|vkShare|W3C_Validator|YandexBot|AdsBot-Google|bingbot|UptimeRobot|PrivatMarket|COMODO DCV|bingbot|Google-Site-Verification|Googlebot-Image", "ioj") then
     local count, err = banlist:incr(search_bot, 1)
     if not count then
         banlist:set(search_bot, 1, 30)
         count = 1
     end
-    if count >= 20 then
-        if count == 20 then
+    if count >= 60 then
+        if count == 60 then
             ngx.log(ngx.ERR, "bot banned")
         end
         ngx.exit(444)

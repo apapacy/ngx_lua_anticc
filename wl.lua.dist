@@ -1,9 +1,9 @@
 -- whitelist conf
 local whitelist = ngx.shared.nla_whitelist
-whitelist:add("x.x.x.x", true)
-whitelist:add("x.x.x.x", true)
-whitelist:add("x.x.x.x", true)
-whitelist:add("x.x.x.x", true)
+whitelist:add("54.229.105.178", true) -- liqpay
+-- whitelist:add("x.x.x.x", true)
+-- whitelist:add("x.x.x.x", true)
+-- whitelist:add("x.x.x.x", true)
 
-ngx.log(ngx.ERR, "*** whitelist initialized ***")
+-- ngx.log(ngx.ERR, "*** whitelist initialized ***")
 
