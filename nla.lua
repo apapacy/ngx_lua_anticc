@@ -37,8 +37,8 @@ else
     end
 end
 
-local network_id = ngx.md5(ngx.var.remote_addr .. ngx.var.hostname .. (headers["User-Agent"] or ""))
-local remote_id = ngx.md5(ngx.var.remote_addr)
+local network_id = ngx.var.remote_addr .. ngx.var.hostname .. (headers["User-Agent"] or "")
+local remote_id = ngx.var.remote_addr
 local count, err = anticc:incr(network_id, 1)
 if not count then
     anticc:set(network_id, 1, 10)
@@ -91,13 +91,13 @@ local COOKIE_KEY = config.cookie_key .. math.floor(os.time() / ROTATE_AFTER_SECO
 -- get or set client seed
 local sid
 if cookies[config.cookie_sid_name] == nil then
-    sid = ngx.md5(ngx.var.remote_addr .. ngx.var.hostname .. (headers["User-Agent"] or "") .. (os.time() + os.clock()))
+    sid = ngx.md5(network_id .. (os.time() + os.clock()))
 else
     sid = cookies[config.cookie_sid_name]
 end
 
 -- session tokens
-local user_id = ngx.encode_base64(ngx.sha1_bin(ngx.var.remote_addr .. ngx.var.hostname .. (headers["User-Agent"] or "") .. COOKIE_KEY .. sid))
+local user_id = ngx.encode_base64(ngx.sha1_bin(COOKIE_KEY .. network_id .. sid))
 
 -- counter from ip
 if not cookies[config.cookie_name] then
