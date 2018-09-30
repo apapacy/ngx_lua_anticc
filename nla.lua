@@ -8,8 +8,6 @@ end
 
 local config = require("config")
 local anticc = ngx.shared.nla_anticc
-local search_bot = "search:bot:count:request:per:10:s"
-local app_requests = "app:request:count:per:10:s"
 -- headers
 local headers = ngx.req.get_headers();
 -- cookies
@@ -21,9 +19,9 @@ if ngx.re.find(ngx.var.uri, "\\/.*?\\.[a-z]+($|\\?|#)", "ioj")
     and not ngx.re.find(ngx.var.uri, "\\/.*?\\.(" .. config.app_ext .. ")($|\\?|#)", "ioj") then
     ngx.ctx.nla_rtype = "resource"
 else
-    local count, err = anticc:incr(app_requests, 1)
+    local count, err = anticc:incr("app_requests", 1)
     if not count then
-        anticc:set(app_requests, 1, 10)
+        anticc:set("app_requests", 1, 10)
         count = 1
     end
     if count >= config.pages_per_ten_second then
@@ -39,9 +37,9 @@ end
 
 local network_id = ngx.var.remote_addr .. ngx.var.hostname .. (headers["User-Agent"] or "")
 local remote_id = ngx.var.remote_addr
-local count, err = anticc:incr(network_id, 1)
+local count, err = anticc:incr("request" .. network_id, 1)
 if not count then
-    anticc:set(network_id, 1, 10)
+    anticc:set("request" .. network_id, 1, 10)
     count = 1
 end
 
@@ -71,9 +69,9 @@ if type(headers["User-Agent"]) ~= "string"
 end
 
 if ngx.re.find(headers["User-Agent"],config.white_bots , "ioj") then
-    local count, err = anticc:incr(search_bot, 1)
+    local count, err = anticc:incr("search_bot", 1)
     if not count then
-        anticc:set(search_bot, 1, 60)
+        anticc:set("search_bot", 1, 60)
         count = 1
     end
     if count >= config.bot_requests_per_minute then
@@ -101,9 +99,9 @@ local user_id = ngx.encode_base64(ngx.sha1_bin(COOKIE_KEY .. network_id .. sid))
 
 -- counter from ip
 if not cookies[config.cookie_name] then
-   local count, err = anticc:incr(remote_id, 1)
+   local count, err = anticc:incr("nocookie" .. remote_id, 1)
     if not count then
-        anticc:set(remote_id, 1, 60)
+        anticc:set("nocookie" .. remote_id, 1, 60)
         count = 1
     end
     if count >= 256 then
@@ -113,9 +111,9 @@ if not cookies[config.cookie_name] then
         ngx.exit(444)
         return
     end
-    count, err = anticc:incr(network_id, 1)
+    count, err = anticc:incr("nocookie" .. network_id, 1)
     if not count then
-        anticc:set(network_id, 1, 3600)
+        anticc:set("nocookie" .. network_id, 1, 3600)
         count = 1
     end
     if count >= 1024 then
@@ -134,9 +132,9 @@ if cookies[config.cookie_name] ~= ngx.md5(user_id) then
     ngx.log(ngx.ERR, cookies[config.cookie_name])
     ngx.log(ngx.ERR, ngx.md5(user_id))
 
-    local count, err = anticc:incr(cookies[config.cookie_name], 1)
+    local count, err = anticc:incr("bad_cookie" .. cookies[config.cookie_name], 1)
     if not count then
-        anticc:set(cookies[config.cookie_name], 1, ROTATE_AFTER_SECOND * 2)
+        anticc:set("bad_cookie" .. cookies[config.cookie_name], 1, ROTATE_AFTER_SECOND * 2)
         count = 1
     end
     if count >= 1024 then
