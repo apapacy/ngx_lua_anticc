@@ -16,28 +16,34 @@ local headers = ngx.req.get_headers();
 local cookie = require("cookie")
 local cookies = cookie.get()
 
--- identify if request is page or resource
-local is_page
+-- identify if request is app or resource
 if ngx.re.find(ngx.var.uri, "\\/.*?\\.[a-z]+($|\\?|#)", "ioj")
     and not ngx.re.find(ngx.var.uri, "\\/.*?\\.(" .. config.app_ext .. ")($|\\?|#)", "ioj") then
     ngx.ctx.nla_rtype = "resource"
-    is_page = false
 else
-    is_page = true
     local count, err = anticc:incr(app_requests, 1)
     if not count then
         anticc:set(app_requests, 1, 10)
         count = 1
     end
     if count >= config.pages_per_ten_second then
-        ngx.ctx.nla_rtype = "page"
+        ngx.ctx.nla_rtype = "app"
         anticc:set("ddos", true, 60)
-        -- ngx.log(ngx.ERR, "ddos mode on next 60s")
+        if count == config.pages_per_ten_second then
+            ngx.log(ngx.ERR, "ddos mode on next 60s")
+        end
     else
         ngx.ctx.nla_rtype = "resource"
     end
 end
 
+local network_id = ngx.md5(ngx.var.remote_addr .. ngx.var.hostname .. (headers["User-Agent"] or ""))
+local remote_id = ngx.md5(ngx.var.remote_addr)
+local count, err = anticc:incr(network_id, 1)
+if not count then
+    anticc:set(network_id, 1, 10)
+    count = 1
+end
 
 local ROTATE_AFTER_SECOND
 local ddos = anticc:get("ddos")
@@ -48,7 +54,9 @@ else
         ROTATE_AFTER_SECOND = config.rotate_after_second
     else
         -- Отключаем режим защиты
-        return
+        if count < config.requests_per_ten_second then
+            return
+        end
     end
 end
 
@@ -65,7 +73,7 @@ end
 if ngx.re.find(headers["User-Agent"],config.white_bots , "ioj") then
     local count, err = anticc:incr(search_bot, 1)
     if not count then
-        anticc:set(search_bot, 1, 30)
+        anticc:set(search_bot, 1, 60)
         count = 1
     end
     if count >= config.bot_requests_per_minute then
@@ -78,34 +86,21 @@ if ngx.re.find(headers["User-Agent"],config.white_bots , "ioj") then
     return
 end
 
--- config options
-local COOKIE_NAME = config.cookie_name
-local COOKIE_SID_NAME = config.cookie_sid_name
-local REQUESTS_PER_TEN_SECOND = config.requests_per_ten_second
-local PAGES_PER_TEN_SECOND = config.pages_per_ten_second
 local COOKIE_KEY = config.cookie_key .. math.floor(os.time() / ROTATE_AFTER_SECOND)
 
 -- get or set client seed
 local sid
-if cookies[COOKIE_SID_NAME] == nil then
+if cookies[config.cookie_sid_name] == nil then
     sid = ngx.md5(ngx.var.remote_addr .. ngx.var.hostname .. (headers["User-Agent"] or "") .. (os.time() + os.clock()))
 else
-    sid = cookies[COOKIE_SID_NAME]
+    sid = cookies[config.cookie_sid_name]
 end
 
 -- session tokens
 local user_id = ngx.encode_base64(ngx.sha1_bin(ngx.var.remote_addr .. ngx.var.hostname .. (headers["User-Agent"] or "") .. COOKIE_KEY .. sid))
-local network_id = ngx.md5(ngx.var.remote_addr .. ngx.var.hostname .. (headers["User-Agent"] or ""))
-local remote_id = ngx.md5(ngx.var.remote_addr)
-
-local count, err = anticc:incr(user_id, 1)
-if not count then
-    anticc:set(user_id, 1, 10)
-    count = 1
-end
 
 -- counter from ip
-if not cookies[COOKIE_NAME] then
+if not cookies[config.cookie_name] then
    local count, err = anticc:incr(remote_id, 1)
     if not count then
         anticc:set(remote_id, 1, 60)
@@ -130,18 +125,18 @@ if not cookies[COOKIE_NAME] then
         ngx.exit(444)
         return
     end
-    cookie.challenge(COOKIE_NAME, user_id, COOKIE_SID_NAME, sid)
+    cookie.challenge(config.cookie_name, user_id, config.cookie_sid_name, sid)
     return
 end
 
 -- counter from sid
-if cookies[COOKIE_NAME] ~= ngx.md5(user_id) then
-    ngx.log(ngx.ERR, cookies[COOKIE_NAME])
+if cookies[config.cookie_name] ~= ngx.md5(user_id) then
+    ngx.log(ngx.ERR, cookies[config.cookie_name])
     ngx.log(ngx.ERR, ngx.md5(user_id))
 
-    local count, err = anticc:incr(cookies[COOKIE_NAME], 1)
+    local count, err = anticc:incr(cookies[config.cookie_name], 1)
     if not count then
-        anticc:set(cookies[COOKIE_NAME], 1, ROTATE_AFTER_SECOND * 2)
+        anticc:set(cookies[config.cookie_name], 1, ROTATE_AFTER_SECOND * 2)
         count = 1
     end
     if count >= 1024 then
@@ -151,11 +146,17 @@ if cookies[COOKIE_NAME] ~= ngx.md5(user_id) then
         ngx.exit(444)
         return
     end
-    cookie.challenge(COOKIE_NAME, user_id, COOKIE_SID_NAME, sid)
+    cookie.challenge(config.cookie_name, user_id, config.cookie_sid_name, sid)
     return
 end
 
-if (count > REQUESTS_PER_TEN_SECOND) then
-    cookie.challenge(COOKIE_NAME, user_id, COOKIE_SID_NAME, sid)
+count, err = anticc:incr(user_id, 1)
+if not count then
+    anticc:set(user_id, 1, 10)
+    count = 1
+end
+
+if count >= config.requests_per_ten_second then
+    cookie.challenge(config.cookie_name, user_id, config.cookie_sid_name, sid)
     return
 end
