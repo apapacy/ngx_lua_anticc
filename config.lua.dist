@@ -1,0 +1,28 @@
+local _M = {}
+
+local anticc = ngx.shared.nla_anticc
+anticc:set("ddos", false, 60)
+
+
+_M.always = false
+_M.use_js = false
+_M.cookie_name = "_sim"
+_M.cookie_sid_name = "_wer"
+_M.cookie_key = "qQN0NxYEA1q7HyK6ieUbqdi1iuu4KJ25n9dkGcowbIdUNKCgXzihIRsDXr0YVp2G" -- .. (os.time() + os.clock())
+-- Расширения файлов приложения
+_M.app_ext = "html|htm|php|py|pl|asp|aspx|ashx|json|xml"
+-- Расширения файлов приложения не фвлфющиеся html
+_M.app_ext_nohtml = "json|xml|js|html"
+-- Количество обращений к приложению после которого влючается режим защиты
+_M.pages_per_ten_second = 2
+-- Количоство обращений с одного адреса
+_M.requests_per_ten_second = 1024
+_M.rotate_after_second = 512
+_M.rotate_after_second_ddos = 10
+_M.white_bots = "Google Page Speed Insights|Googlebot|baiduspider|twitterbot|"
+    .. "facebookexternalhit|rogerbot|linkedinbot|embedly|quora link preview|showyoubot|"
+    .. "outbrain|pinterest|slackbot|vkShare|W3C_Validator|YandexBot|AdsBot-Google|bingbot"
+    .. "|UptimeRobot|PrivatMarket|COMODO DCV|bingbot|Google-Site-Verification|Googlebot-Image"
+_M.bot_requests_per_minute = 120
+
+return _M

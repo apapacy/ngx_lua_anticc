@@ -62,7 +62,8 @@ end
 function _M.challenge(cookie_name, cookie_value, cookie_sid_name, cookie_sid_value)
     local headers = ngx.req.get_headers()
     -- if static resource is requested, use Set-Cookie and 302 to challenge
-    if ngx.ctx.nla_rtype == "resource"
+    if config.use_js == false
+        or ngx.ctx.nla_rtype == "resource"
         or ngx.var.request_method ~= "GET"
         or ngx.re.find(ngx.var.uri, "\\/.*?\\.(" .. config.app_ext_nohtml .. ")($|\\?|#)", "ioj")
         or headers["X-Requested-With"] == "XMLHttpRequest" then

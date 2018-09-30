@@ -1,4 +1,3 @@
-local config = require("config")
 
 -- if client IP is in whitelist, pass
 local whitelist = ngx.shared.nla_whitelist
@@ -7,48 +6,15 @@ if in_whitelist then
     return
 end
 
--- HTTP headers
-local headers = ngx.req.get_headers();
-
--- wp ddos
-if type(headers["User-Agent"]) ~= "string"
-    or headers["User-Agent"] == ""
-    or ngx.re.find(headers["User-Agent"], "^PHP", "ioj")
-    or ngx.re.find(headers["User-Agent"], "^WordPress", "ioj") then
-    ngx.log(ngx.ERR, "ddos")
-    ngx.exit(444)
-    return
-end
-
+local config = require("config")
 local anticc = ngx.shared.nla_anticc
 local search_bot = "search:bot:count:request:per:10:s"
 local app_requests = "app:request:count:per:10:s"
-if ngx.re.find(headers["User-Agent"], "Google Page Speed Insights|Googlebot|baiduspider|twitterbot|facebookexternalhit|rogerbot|linkedinbot|embedly|quora link preview|showyoubot|outbrain|pinterest|slackbot|vkShare|W3C_Validator|YandexBot|AdsBot-Google|bingbot|UptimeRobot|PrivatMarket|COMODO DCV|bingbot|Google-Site-Verification|Googlebot-Image", "ioj") then
-    local count, err = anticc:incr(search_bot, 1)
-    if not count then
-        anticc:set(search_bot, 1, 30)
-        count = 1
-    end
-    if count >= 60 then
-        if count == 60 then
-            ngx.log(ngx.ERR, "bot banned")
-        end
-        ngx.exit(444)
-        return
-    end
-    return
-end
-
+-- headers
+local headers = ngx.req.get_headers();
 -- cookies
 local cookie = require("cookie")
 local cookies = cookie.get()
-
--- config options
-local ROTATE_AFTER_SECOND = config.rotate_after_second_ddos
-local COOKIE_NAME = config.cookie_name
-local COOKIE_SID_NAME = config.cookie_sid_name
-local REQUESTS_PER_TEN_SECOND = config.requests_per_ten_second
-local PAGES_PER_TEN_SECOND = config.pages_per_ten_second
 
 -- identify if request is page or resource
 local is_page
@@ -63,7 +29,7 @@ else
         anticc:set(app_requests, 1, 10)
         count = 1
     end
-    if count >= PAGES_PER_TEN_SECOND then
+    if count >= config.pages_per_ten_second then
         ngx.ctx.nla_rtype = "page"
         anticc:set("ddos", true, 60)
         -- ngx.log(ngx.ERR, "ddos mode on next 60s")
@@ -72,11 +38,51 @@ else
     end
 end
 
+
+local ROTATE_AFTER_SECOND
 local ddos = anticc:get("ddos")
-if not (ddos == true) then
-    ROTATE_AFTER_SECOND = 600
+if ddos == true then
+    ROTATE_AFTER_SECOND = config.rotate_after_second_ddos
+else
+    if config.always then
+        ROTATE_AFTER_SECOND = config.rotate_after_second
+    else
+        -- Отключаем режим защиты
+        return
+    end
 end
 
+-- wp ddos and simple bots
+if type(headers["User-Agent"]) ~= "string"
+    or headers["User-Agent"] == ""
+    or ngx.re.find(headers["User-Agent"], "^PHP", "ioj")
+    or ngx.re.find(headers["User-Agent"], "^WordPress", "ioj") then
+    ngx.log(ngx.ERR, "ddos")
+    ngx.exit(444)
+    return
+end
+
+if ngx.re.find(headers["User-Agent"],config.white_bots , "ioj") then
+    local count, err = anticc:incr(search_bot, 1)
+    if not count then
+        anticc:set(search_bot, 1, 30)
+        count = 1
+    end
+    if count >= config.bot_requests_per_minute then
+        if count == config.bot_requests_per_minute then
+            ngx.log(ngx.ERR, "bot banned")
+        end
+        ngx.exit(444)
+        return
+    end
+    return
+end
+
+-- config options
+local COOKIE_NAME = config.cookie_name
+local COOKIE_SID_NAME = config.cookie_sid_name
+local REQUESTS_PER_TEN_SECOND = config.requests_per_ten_second
+local PAGES_PER_TEN_SECOND = config.pages_per_ten_second
 local COOKIE_KEY = config.cookie_key .. math.floor(os.time() / ROTATE_AFTER_SECOND)
 
 -- get or set client seed
