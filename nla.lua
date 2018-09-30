@@ -43,13 +43,13 @@ if not count then
     count = 1
 end
 
-local ROTATE_AFTER_SECOND
+local rotate_after_second
 local ddos = anticc:get("ddos")
 if ddos == true then
-    ROTATE_AFTER_SECOND = config.rotate_after_second_ddos
+    rotate_after_second = config.rotate_after_second_ddos
 else
     if config.always then
-        ROTATE_AFTER_SECOND = config.rotate_after_second
+        rotate_after_second = config.rotate_after_second
     else
         -- Отключаем режим защиты
         if count < config.requests_per_ten_second then
@@ -84,7 +84,7 @@ if ngx.re.find(headers["User-Agent"],config.white_bots , "ioj") then
     return
 end
 
-local COOKIE_KEY = config.cookie_key .. math.floor(os.time() / ROTATE_AFTER_SECOND)
+local cookie_key = config.cookie_key .. math.floor(os.time() / rotate_after_second)
 
 -- get or set client seed
 local sid
@@ -95,7 +95,7 @@ else
 end
 
 -- session tokens
-local user_id = ngx.encode_base64(ngx.sha1_bin(COOKIE_KEY .. network_id .. sid))
+local user_id = ngx.encode_base64(ngx.sha1_bin(cookie_key .. network_id .. sid))  -- у реаьного киента sid не меняется network_id - может
 
 -- counter from ip
 if not cookies[config.cookie_name] then
@@ -134,7 +134,7 @@ if cookies[config.cookie_name] ~= ngx.md5(user_id) then
 
     local count, err = anticc:incr("bad_cookie" .. cookies[config.cookie_name], 1)
     if not count then
-        anticc:set("bad_cookie" .. cookies[config.cookie_name], 1, ROTATE_AFTER_SECOND * 2)
+        anticc:set("bad_cookie" .. cookies[config.cookie_name], 1, rotate_after_second * 2)
         count = 1
     end
     if count >= 1024 then
