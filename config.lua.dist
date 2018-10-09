@@ -4,10 +4,10 @@ local start_time = anticc:get("start_time")
 local _M = {}
 
 -- Режим защиты активирован всегда / включается при атаке
-_M.always = false
+_M.always = true
 
 -- Проверять киентов на выполнение JavaScript (может вызывать проблемы при запросах Ajax)
-_M.use_js = false
+_M.use_js = true
 
 -- cookie токена
 _M.cookie_name = "_sim"
@@ -25,7 +25,7 @@ _M.app_ext = "html|htm|php|py|pl|asp|aspx|ashx|json|xml"
 _M.app_ext_nohtml = "json|xml|js|html" -- html может загружаться Ajax
 
 -- Количество обращений к приложению после которого влючается режим защиты / 10 с.
-_M.pages_per_ten_second = 5
+_M.pages_per_ten_second = 60
 
 -- Количество обращений с одного адреса, после которого включается режим проверки / 10 с.
 _M.requests_per_ten_second = 1024
