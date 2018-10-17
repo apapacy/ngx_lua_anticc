@@ -1,4 +1,3 @@
-
 -- if client IP is in whitelist, pass
 local whitelist = ngx.shared.nla_whitelist
 in_whitelist = whitelist:get(ngx.var.remote_addr)
