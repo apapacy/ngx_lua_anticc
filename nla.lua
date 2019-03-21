@@ -16,6 +16,9 @@ local cookies = cookie.get()
 -- identify if request is app or resource
 if ngx.re.find(ngx.var.uri, "\\/.*?\\.[a-z]+($|\\?|#)", "ioj")
     and not ngx.re.find(ngx.var.uri, "\\/.*?\\.(" .. config.app_ext .. ")($|\\?|#)", "ioj") then
+    if not config.check_static and ngx.re.find(ngx.var.uri, "\\/.*?\\.(" .. config.ext_static .. ")($|\\?|#)", "ioj") then
+        return
+    end
     ngx.ctx.nla_rtype = "resource"
 else
     local count, err = anticc:incr("app_requests", 1)
