@@ -28,7 +28,7 @@ _M.app_ext = "html|htm|php|py|pl|asp|aspx|ashx|json|xml"
 _M.app_ext_nohtml = "json|xml|js|html" -- html может загружаться Ajax
 
 -- Расширения статических файлов - актуально при _M.check_static = false
-_M.ext_static = "|css|jpg|jpeg|png|gif|svg|woff"
+_M.ext_static = "css|jpg|jpeg|png|gif|svg|woff"
 
 -- Количество обращений к приложению после которого влючается режим защиты / 10 с.
 _M.pages_per_ten_second = 60
