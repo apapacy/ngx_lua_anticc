@@ -1,3 +1,4 @@
+local exec = require 'resty.exec'
 -- if client IP is in whitelist, pass
 local whitelist = ngx.shared.nla_whitelist
 in_whitelist = whitelist:get(ngx.var.remote_addr)
@@ -12,6 +13,17 @@ local headers = ngx.req.get_headers();
 -- cookies
 local cookie = require("cookie")
 local cookies = cookie.get()
+
+
+if ngx.re.find(headers["User-Agent"],config.google_bots , "ioj") then
+    local prog = exec.new('/tmp/exec.sock')
+    prog.argv = { 'host', ngx.var.remote_addr }
+    local res, err = prog()
+    if res and ngx.re.find(res.stdout, "localhost|google") then
+	whitelist:add(ngx.var.remote_addr, true)
+        return
+    end
+end
 
 -- identify if request is app or resource
 if ngx.re.find(ngx.var.uri, "\\/.*?\\.[a-z]+($|\\?|#)", "ioj")

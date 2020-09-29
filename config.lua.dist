@@ -10,7 +10,7 @@ _M.always = true
 _M.use_js = false
 
 -- Проверять киентов при обращении к статическому контенту (модет вызвать проблемы с почтовыми агентами)
-_M.check_static = false
+_M.check_static = true
 
 -- cookie токена
 _M.cookie_name = "_sim"
@@ -42,11 +42,18 @@ _M.rotate_after_second = 512
 -- Период ротации токенов (при выявлении ddos атаки), с.
 _M.rotate_after_second_ddos = 10
 
+
+-- Список ботов Google
+_M.google_bots = "APIs-Google|Mediapartners-Google|AdsBot-Google-Mobile|AdsBot-Google|"
+    .. "Googlebot-Image|Googlebot-News|Googlebot-Video|Googlebot|Mediapartners-Google|"
+    .. "AdsBot-Google-Mobile-Apps|FeedFetcher-Google|Google-Read-Aloud|DuplexWeb-Google|"
+    .. "Google Favicon|googleweblight|Google Page Speed Insights|Google-Site-Verification"
+
+
 -- Список допустимых ботов
-_M.white_bots = "Google Page Speed Insights|Googlebot|baiduspider|twitterbot|"
-    .. "facebookexternalhit|rogerbot|linkedinbot|embedly|quora link preview|showyoubot|"
-    .. "outbrain|pinterest|slackbot|vkShare|W3C_Validator|YandexBot|AdsBot-Google|bingbot"
-    .. "|UptimeRobot|PrivatMarket|COMODO DCV|bingbot|Google-Site-Verification|Googlebot-Image"
+_M.white_bots = "baiduspider|twitterbot|facebookexternalhit|rogerbot|linkedinbot|embedly|"
+    .. "quora link preview|showyoubot|outbrain|pinterest|slackbot|vkShare|W3C_Validator|"
+    .. "YandexBot|AdsBot-Google|bingbot|UptimeRobot|PrivatMarket|COMODO DCV|bingbot"
 
 -- Количество допутсимых запросов ботов / 1 мин.
 _M.bot_requests_per_minute = 120
