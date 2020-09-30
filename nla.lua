@@ -20,14 +20,14 @@ if ngx.re.find(headers["User-Agent"],config.google_bots , "ioj") then
     prog.argv = { 'host', ngx.var.remote_addr }
     local res, err = prog()
     if res and ngx.re.find(res.stdout, "localhost|google") then
-	ngx.log(ngx.ERR, "ip " .. ngx.var.remote_addr .. " from " .. res.stdout .. " added to whitelist")
+	ngx.log(ngx.WARN, "ip " .. ngx.var.remote_addr .. " from " .. res.stdout .. " added to whitelist")
 	whitelist:add(ngx.var.remote_addr, true)
         return
     end
     if res then
-        ngx.log(ngx.ERR, "ip " .. ngx.var.remote_addr .. " from " .. res.stdout .. "not added to whitelist")
+        ngx.log(ngx.WARN, "ip " .. ngx.var.remote_addr .. " from " .. res.stdout .. "not added to whitelist")
     else
-        ngx.log(ngx.ERR, "lua-resty-exec error: " .. err)
+        ngx.log(ngx.WARN, "lua-resty-exec error: " .. err)
     end
 
 end
@@ -49,7 +49,7 @@ else
         ngx.ctx.nla_rtype = "app"
         anticc:set("ddos", true, 60)
         if count == config.pages_per_ten_second then
-            ngx.log(ngx.ERR, "ddos mode on next 60s")
+            ngx.log(ngx.WARN, "ddos mode on next 60s")
         end
     else
         ngx.ctx.nla_rtype = "resource"
@@ -84,7 +84,7 @@ if type(headers["User-Agent"]) ~= "string"
     or headers["User-Agent"] == ""
     or ngx.re.find(headers["User-Agent"], "^PHP", "ioj")
     or ngx.re.find(headers["User-Agent"], "^WordPress", "ioj") then
-    ngx.log(ngx.ERR, "ddos")
+    ngx.log(ngx.WARN, "ddos")
     ngx.exit(444)
     return
 end
@@ -97,7 +97,7 @@ if ngx.re.find(headers["User-Agent"],config.white_bots , "ioj") then
     end
     if count >= config.bot_requests_per_minute then
         if count == config.bot_requests_per_minute then
-            ngx.log(ngx.ERR, "bot banned")
+            ngx.log(ngx.WARN, "bot banned")
         end
         ngx.exit(444)
         return
@@ -127,7 +127,7 @@ if not cookies[config.cookie_name] then
     end
     if count >= 256 then
         if count == 256 then
-            ngx.log(ngx.ERR, "client banned by remote address")
+            ngx.log(ngx.WARN, "client banned by remote address")
         end
         ngx.exit(444)
         return
@@ -139,7 +139,7 @@ if not cookies[config.cookie_name] then
     end
     if count >= 1024 then
         if count == 1024 then
-            ngx.log(ngx.ERR, "client banned by network")
+            ngx.log(ngx.WARN, "client banned by network")
         end
         ngx.exit(444)
         return
@@ -150,8 +150,8 @@ end
 
 -- counter from sid
 if cookies[config.cookie_name] ~= ngx.md5(user_id) then
-    ngx.log(ngx.ERR, cookies[config.cookie_name])
-    ngx.log(ngx.ERR, ngx.md5(user_id))
+    ngx.log(ngx.WARN, cookies[config.cookie_name])
+    ngx.log(ngx.WARN, ngx.md5(user_id))
 
     local count, err = anticc:incr("bad_cookie" .. cookies[config.cookie_name], 1)
     if not count then
@@ -160,7 +160,7 @@ if cookies[config.cookie_name] ~= ngx.md5(user_id) then
     end
     if count >= 1024 then
         if count == 1024 then
-            ngx.log(ngx.ERR, "client banned by bad sid")
+            ngx.log(ngx.WARN, "client banned by bad sid")
         end
         ngx.exit(444)
         return
