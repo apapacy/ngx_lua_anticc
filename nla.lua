@@ -20,9 +20,16 @@ if ngx.re.find(headers["User-Agent"],config.google_bots , "ioj") then
     prog.argv = { 'host', ngx.var.remote_addr }
     local res, err = prog()
     if res and ngx.re.find(res.stdout, "localhost|google") then
+	ngx.log(ngx.ERR, "ip " .. ngx.var.remote_addr .. " from " .. res.stdout .. " added to whitelist")
 	whitelist:add(ngx.var.remote_addr, true)
         return
     end
+    if res then
+        ngx.log(ngx.ERR, "ip " .. ngx.var.remote_addr .. " from " .. res.stdout .. "not added to whitelist")
+    else
+        ngx.log(ngx.ERR, "lua-resty-exec error: " .. err)
+    end
+
 end
 
 -- identify if request is app or resource
