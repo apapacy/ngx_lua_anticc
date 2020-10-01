@@ -14,6 +14,16 @@ local headers = ngx.req.get_headers();
 local cookie = require("cookie")
 local cookies = cookie.get()
 
+-- wp ddos and simple bots
+if headers["User-Agent"] == nil
+    or type(headers["User-Agent"]) ~= "string"
+    or headers["User-Agent"] == ""
+    or ngx.re.find(headers["User-Agent"], "^PHP", "ioj")
+    or ngx.re.find(headers["User-Agent"], "^WordPress", "ioj") then
+    ngx.log(ngx.WARN, "ddos")
+    ngx.exit(444)
+    return
+end
 
 if ngx.re.find(headers["User-Agent"],config.google_bots , "ioj") then
     local prog = exec.new('/tmp/exec.sock')
@@ -77,16 +87,6 @@ else
             return
         end
     end
-end
-
--- wp ddos and simple bots
-if type(headers["User-Agent"]) ~= "string"
-    or headers["User-Agent"] == ""
-    or ngx.re.find(headers["User-Agent"], "^PHP", "ioj")
-    or ngx.re.find(headers["User-Agent"], "^WordPress", "ioj") then
-    ngx.log(ngx.WARN, "ddos")
-    ngx.exit(444)
-    return
 end
 
 if ngx.re.find(headers["User-Agent"],config.white_bots , "ioj") then
