@@ -18,7 +18,7 @@ _M.cookie_name = "_sim"
 -- cookie идентификатора клиента
 _M.cookie_sid_name = "_wer"
 
--- секретный ключ
+-- Секретный ключ
 _M.cookie_key = "qQN0NxYEA1q7HyK6ieUbqdi1iuu4KJ25n9dkGcowbIdUNKCgXzihIRsDXr0YVp2G" .. start_time
 
 -- Расширения файлов приложения
@@ -53,7 +53,7 @@ _M.google_bots = "APIs-Google|Mediapartners-Google|AdsBot-Google-Mobile|AdsBot-G
 -- Список допустимых ботов
 _M.white_bots = "baiduspider|twitterbot|facebookexternalhit|rogerbot|linkedinbot|embedly|"
     .. "quora link preview|showyoubot|outbrain|pinterest|slackbot|vkShare|W3C_Validator|"
-    .. "YandexBot|AdsBot-Google|bingbot|UptimeRobot|PrivatMarket|COMODO DCV|bingbot"
+    .. "YandexBot|bingbot|UptimeRobot|PrivatMarket|COMODO DCV|bingbot"
 
 -- Количество допутсимых запросов ботов / 1 мин.
 _M.bot_requests_per_minute = 120
