@@ -6,10 +6,10 @@ local _M = {}
 -- Режим защиты активирован всегда / включается при атаке
 _M.always = true
 
--- Проверять киентов на выполнение JavaScript (может вызывать проблемы при запросах Ajax)
+-- Проверять клиентов на выполнение JavaScript (может вызывать проблемы при запросах Ajax)
 _M.use_js = false
 
--- Проверять киентов при обращении к статическому контенту (модет вызвать проблемы с почтовыми агентами)
+-- Проверять клиентов при обращении к статическому контенту (модет вызвать проблемы с почтовыми агентами)
 _M.check_static = true
 
 -- cookie токена
@@ -47,7 +47,7 @@ _M.rotate_after_second_ddos = 10
 _M.google_bots = "APIs-Google|Mediapartners-Google|AdsBot-Google-Mobile|AdsBot-Google|"
     .. "Googlebot-Image|Googlebot-News|Googlebot-Video|Googlebot|Mediapartners-Google|"
     .. "AdsBot-Google-Mobile-Apps|FeedFetcher-Google|Google-Read-Aloud|DuplexWeb-Google|"
-    .. "Google Favicon|googleweblight|Google Page Speed Insights|Google-Site-Verification"
+    .. "Google Favicon|googleweblight|Google Page Speed Insights|Google-Site-Verification|Google-Structured-Data-Testing-Tool"
 
 
 -- Список допустимых ботов
