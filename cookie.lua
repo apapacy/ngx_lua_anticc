@@ -53,7 +53,7 @@ function _M.get()
     if type(headers["Cookie"]) ~= "string" then
        return ret
     end
-    for k, v in string.gmatch(headers["Cookie"], "([^=]+)=([^;]+);?%s*") do
+    for k, v in string.gmatch(headers["Cookie"], "([^=]+)=([^;]*);?%s*") do
         ret[k] = v
     end
     return ret
