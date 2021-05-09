@@ -25,23 +25,6 @@ if headers["User-Agent"] == nil
     return
 end
 
---if ngx.re.find(headers["User-Agent"],config.google_bots , "ioj") then
---    local prog = exec.new('/tmp/exec.sock')
---    prog.argv = { 'host', ngx.var.remote_addr }
---    local res, err = prog()
---    if res and ngx.re.find(res.stdout, "localhost|google") then
---	ngx.log(ngx.WARN, "ip " .. ngx.var.remote_addr .. " from " .. res.stdout .. " added to whitelist")
---	whitelist:add(ngx.var.remote_addr, true)
---       return
---    end
---   if res then
---        ngx.log(ngx.WARN, "ip " .. ngx.var.remote_addr .. " from " .. res.stdout .. "not added to whitelist")
---    else
---        ngx.log(ngx.WARN, "lua-resty-exec error: " .. err)
---    end
---
---end
-
 -- identify if request is app or resource
 local nla_rtype
 if ngx.re.find(ngx.var.uri, "\\/.*?\\.[a-z]+($|\\?|#)", "ioj")
@@ -101,5 +84,4 @@ if (nla_rtype == "app" and app_count and app_count > 10) then
     ngx.log(ngx.ERR, "client banned by request count " .. app_count .. "/" .. (resource_count or ""))
     ngx.exit(444)
   end
-
 end
