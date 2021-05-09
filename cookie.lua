@@ -1,6 +1,22 @@
+local config = require("config")
+
 local _M = {}
 
-_M.challenge_code_tmpl = [[
+local get_cookies = function()
+    local cookies = ngx.header["Set-Cookie"] or {}
+    if type(cookies) == "string" then
+        cookies = {cookies}
+    end
+    return cookies
+end
+
+local add_cookie = function(cookie)
+    local cookies = get_cookies()
+    table.insert(cookies, cookie)
+    ngx.header['Set-Cookie'] = cookies
+end
+
+ local challenge_code_tmpl = [[
 <html>
 <head>
     <script src="/md5.js"></script>
@@ -9,10 +25,10 @@ _M.challenge_code_tmpl = [[
       while((new Date()).getTime() - begin < 500);
       var cookie_name = "%s";
       var cookie_value = "%s";
-      var cookie_sid = "%s";
-      var sid = "%s";
+      var cookie_sid_name = "%s";
+      var cookie_sid_value = "%s";
       document.cookie = cookie_name + "=" + md5(cookie_value) + ";Path=/;Max-age=99999999";
-      document.cookie = cookie_sid + "=" + sid + ";Path=/;Max-age=99999999";
+      document.cookie = cookie_sid_name + "=" + cookie_sid_value + ";Path=/;Max-age=99999999";
       try {
         if (window.top.location.hostname === window.location.hostname) {
           window.location.reload();
@@ -37,44 +53,31 @@ function _M.get()
     if type(headers["Cookie"]) ~= "string" then
        return ret
     end
-    for k, v in string.gmatch(headers["Cookie"], "([^=]+)=([^;]+);?%s*") do
+    for k, v in string.gmatch(headers["Cookie"], "([^=]+)=([^;]*);?%s*") do
         ret[k] = v
     end
     return ret
 end
 
-function _M.challenge(cookie_name, cookie_value, cookie_sid, sid)
+function _M.challenge(cookie_name, cookie_value, cookie_sid_name, cookie_sid_value)
     local headers = ngx.req.get_headers()
     -- if static resource is requested, use Set-Cookie and 302 to challenge
-    if ngx.ctx.nla_rtype == "resource"
+    if config.use_js ~= true
+        or ngx.ctx.nla_rtype == "resource"
         or ngx.var.request_method ~= "GET"
-        or ngx.re.find(ngx.var.uri, "\\/.*?\\.(json|xml|js|html)($|\\?|#)", "ioj")
+        or ngx.re.find(ngx.var.uri, "\\/.*?\\.(" .. config.app_ext_nohtml .. ")($|\\?|#)", "ioj")
         or headers["X-Requested-With"] == "XMLHttpRequest" then
         add_cookie(cookie_name .. "=" .. ngx.md5(cookie_value) .. ";Path=/;Max-age=99999999")
-        add_cookie(cookie_sid .. "=" .. sid .. ";Path=/;Max-age=99999999")
+        add_cookie(cookie_sid_name .. "=" .. cookie_sid_value .. ";Path=/;Max-age=99999999")
         ngx.redirect(ngx.var.request_uri, ngx.HTTP_TEMPORARY_REDIRECT)
         return
     end
 
     -- use JS set cookie to challenge
-    local challenge_code = string.format(_M.challenge_code_tmpl,
-        cookie_name, cookie_value, cookie_sid, sid)
+    local challenge_code = string.format(challenge_code_tmpl,
+        cookie_name, cookie_value, cookie_sid_name, cookie_sid_value)
     ngx.header["Content-Type"] = "text/html;charset='utf-8'"
     ngx.say(challenge_code)
-end
-
-function get_cookies()
-    local cookies = ngx.header["Set-Cookie"] or {}
-    if type(cookies) == "string" then
-        cookies = {cookies}
-    end
-    return cookies
-end
-
-function add_cookie(cookie)
-    local cookies = get_cookies()
-    table.insert(cookies, cookie)
-    ngx.header['Set-Cookie'] = cookies
 end
 
 return _M

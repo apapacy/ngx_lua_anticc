@@ -1,3 +1,4 @@
+local exec = require 'resty.exec'
 -- if client IP is in whitelist, pass
 local whitelist = ngx.shared.nla_whitelist
 in_whitelist = whitelist:get(ngx.var.remote_addr)
@@ -5,204 +6,176 @@ if in_whitelist then
     return
 end
 
--- HTTP headers
+local config = require("config")
+local anticc = ngx.shared.nla_anticc
+-- headers
 local headers = ngx.req.get_headers();
-
--- wp ddos
-if type(headers["User-Agent"]) ~= "string"
-    or headers["User-Agent"] == ""
-    or ngx.re.find(headers["User-Agent"], "^PHP", "ioj") 
-    or ngx.re.find(headers["User-Agent"], "^WordPress", "ioj") then
-    ngx.log(ngx.ERR, "ddos")
-    ngx.exit(444)
-    return
-end
-
-local banlist = ngx.shared.nla_banlist
-local search_bot = "search:bot:count:request:per:10:s"
-local app_requests = "app:request:count:per:10:s"
-if ngx.re.find(headers["User-Agent"], "Google Page Speed Insights|Googlebot|baiduspider|twitterbot|facebookexternalhit|rogerbot|linkedinbot|embedly|quora link preview|showyoubot|outbrain|pinterest|slackbot|vkShare|W3C_Validator|YandexBot|AdsBot-Google|bingbot|UptimeRobot|PrivatMarket|COMODO DCV|bingbot|Google-Site-Verification|Googlebot-Image", "ioj") then
-    local count, err = banlist:incr(search_bot, 1)
-    if not count then
-        banlist:set(search_bot, 1, 30)
-        count = 1
-    end
-    if count >= 60 then
-        if count == 60 then
-            ngx.log(ngx.ERR, "bot banned")
-        end
-        ngx.exit(444)
-        return
-    end
-    return
-end
-
 -- cookies
 local cookie = require("cookie")
 local cookies = cookie.get()
 
--- global shared dict
-local config = ngx.shared.nla_config
-local req_count = ngx.shared.nla_req_count
-local net_count = ngx.shared.nla_net_count
-local page_count = ngx.shared.nla_page_count
+-- wp ddos and simple bots
+if headers["User-Agent"] == nil
+    or type(headers["User-Agent"]) ~= "string"
+    or headers["User-Agent"] == ""
+    or ngx.re.find(headers["User-Agent"], "^PHP", "ioj")
+    or ngx.re.find(headers["User-Agent"], "^WordPress", "ioj") then
+    ngx.log(ngx.WARN, "ddos")
+    ngx.exit(444)
+    return
+end
 
--- config options
-local ROTATE_AFTER_SECOND = config:get("rotate_after_second")
-local COOKIE_NAME = config:get("cookie_name")
-local COOKIE_SID = config:get("cookie_sid")
--- local COOKIE_KEY = config:get("cookie_key") .. math.floor(os.time() / ROTATE_AFTER_SECOND)
-local REQUESTS_PER_TEN_SECOND = config:get("requests_per_ten_second")
-local PAGES_PER_TEN_SECOND = config:get("pages_per_ten_second")
+if ngx.re.find(headers["User-Agent"],config.google_bots , "ioj") then
+    local prog = exec.new('/tmp/exec.sock')
+    prog.argv = { 'host', ngx.var.remote_addr }
+    local res, err = prog()
+    if res and ngx.re.find(res.stdout, "localhost|google") then
+	ngx.log(ngx.WARN, "ip " .. ngx.var.remote_addr .. " from " .. res.stdout .. " added to whitelist")
+	whitelist:add(ngx.var.remote_addr, true)
+        return
+    end
+    if res then
+        ngx.log(ngx.WARN, "ip " .. ngx.var.remote_addr .. " from " .. res.stdout .. "not added to whitelist")
+    else
+        ngx.log(ngx.WARN, "lua-resty-exec error: " .. err)
+    end
 
--- identify if request is page or resource
-local is_page
-if ngx.re.find(ngx.var.uri, "\\/.*?\\.[a-z]+($|\\?|#)", "ioj") 
-    and not ngx.re.find(ngx.var.uri, "\\/.*?\\.(html|htm|php|py|pl|asp|aspx|ashx|json|xml)($|\\?|#)", "ioj") then
+end
+
+-- identify if request is app or resource
+if ngx.re.find(ngx.var.uri, "\\/.*?\\.[a-z]+($|\\?|#)", "ioj")
+    and not ngx.re.find(ngx.var.uri, "\\/.*?\\.(" .. config.app_ext .. ")($|\\?|#)", "ioj") then
+    if not config.check_static and ngx.re.find(ngx.var.uri, "\\/.*?\\.(" .. config.ext_static .. ")($|\\?|#)", "ioj") then
+        return
+    end
     ngx.ctx.nla_rtype = "resource"
-    is_page = false
 else
-    is_page = true
-    local count, err = banlist:incr(app_requests, 1)
+    local count, err = anticc:incr("app_requests", 1)
     if not count then
-        banlist:set(app_requests, 1, 10)
+        anticc:set("app_requests", 1, 10)
         count = 1
     end
-    if count >= PAGES_PER_TEN_SECOND then
-        ngx.ctx.nla_rtype = "page"
-        config:set("ddos", true, 60)
-        -- ngx.log(ngx.ERR, "ddos mode on next 60s")
+    if count >= config.pages_per_ten_second then
+        ngx.ctx.nla_rtype = "app"
+        anticc:set("ddos", true, 60)
+        if count == config.pages_per_ten_second then
+            ngx.log(ngx.WARN, "ddos mode on next 60s")
+        end
     else
         ngx.ctx.nla_rtype = "resource"
     end
 end
 
-
-local ddos = config:get("ddos")
-if not (ddos == true) then
-    ROTATE_AFTER_SECOND = 600
-end
-
-local COOKIE_KEY = config:get("cookie_key") .. math.floor(os.time() / ROTATE_AFTER_SECOND)
-
-
--- init random
--- math.randomseed(os.time() + os.clock())
-
--- get or set client seed
-local sid
-if cookies[COOKIE_SID] == nil then
-    sid = ngx.md5(ngx.var.remote_addr .. ngx.var.hostname .. (headers["User-Agent"] or "") .. (os.time() + os.clock()))
-else
-    sid = cookies[COOKIE_SID]
-end
-
--- session tokens
-local user_id = ngx.encode_base64(ngx.sha1_bin(ngx.var.remote_addr .. ngx.var.hostname .. (headers["User-Agent"] or "") .. COOKIE_KEY .. sid))
-local network_id = ngx.md5(ngx.var.remote_addr .. ngx.var.hostname .. (headers["User-Agent"] or ""))
-local remote_id = ngx.md5(ngx.var.remote_addr)
-
-local count, err = req_count:incr(ngx.md5(user_id), 1)
+local network_id = ngx.var.remote_addr .. ngx.var.hostname .. (headers["User-Agent"] or "")
+local remote_id = ngx.var.remote_addr
+local count, err = anticc:incr("request" .. network_id, 1)
 if not count then
-    req_count:set(ngx.md5(user_id), 1, 10)
+    anticc:set("request" .. network_id, 1, 10)
     count = 1
 end
 
--- counter from ip
-if not cookies[COOKIE_NAME] then
-   local count, err = net_count:incr(remote_id, 1)
+local rotate_after_second
+local ddos = anticc:get("ddos")
+if ddos == true then
+    rotate_after_second = config.rotate_after_second_ddos
+else
+    if config.always then
+        rotate_after_second = config.rotate_after_second
+    else
+        -- Отключаем режим защиты
+        if count < config.requests_per_ten_second then
+            return
+        end
+    end
+end
+
+if ngx.re.find(headers["User-Agent"],config.white_bots , "ioj") then
+    local count, err = anticc:incr("search_bot", 1)
     if not count then
-        net_count:set(remote_id, 1, 60)
+        anticc:set("search_bot", 1, 60)
+        count = 1
+    end
+    if count >= config.bot_requests_per_minute then
+        if count == config.bot_requests_per_minute then
+            ngx.log(ngx.WARN, "bot banned")
+        end
+        ngx.exit(444)
+        return
+    end
+    return
+end
+
+local cookie_key = config.cookie_key .. math.floor(os.time() / rotate_after_second)
+
+-- get or set client seed
+local sid
+if cookies[config.cookie_sid_name] == nil then
+    sid = ngx.md5(network_id .. (os.time() + os.clock()))
+else
+    sid = cookies[config.cookie_sid_name]
+end
+
+-- session tokens
+local user_id = ngx.encode_base64(ngx.sha1_bin(cookie_key .. network_id .. sid))  -- у реаьного киента sid не меняется network_id - может
+
+-- counter from ip
+if not cookies[config.cookie_name] then
+   local count, err = anticc:incr("nocookie" .. remote_id, 1)
+    if not count then
+        anticc:set("nocookie" .. remote_id, 1, 60)
         count = 1
     end
     if count >= 256 then
         if count == 256 then
-            ngx.log(ngx.ERR, "client banned by remote address")
+            ngx.log(ngx.WARN, "client banned by remote address")
         end
         ngx.exit(444)
         return
     end
-    count, err = net_count:incr(network_id, 1)
+    count, err = anticc:incr("nocookie" .. network_id, 1)
     if not count then
-        net_count:set(network_id, 1, 3600)
+        anticc:set("nocookie" .. network_id, 1, 3600)
         count = 1
     end
     if count >= 1024 then
         if count == 1024 then
-            ngx.log(ngx.ERR, "client banned by network")
+            ngx.log(ngx.WARN, "client banned by network")
         end
         ngx.exit(444)
         return
     end
-    cookie.challenge(COOKIE_NAME, user_id, COOKIE_SID, sid)
+    cookie.challenge(config.cookie_name, user_id, config.cookie_sid_name, sid)
     return
 end
 
 -- counter from sid
-if cookies[COOKIE_NAME] ~= ngx.md5(user_id) then
-    local count, err = banlist:incr(cookies[COOKIE_NAME], 1)
+if cookies[config.cookie_name] ~= ngx.md5(user_id) then
+    ngx.log(ngx.WARN, cookies[config.cookie_name])
+    ngx.log(ngx.WARN, ngx.md5(user_id))
+
+    local count, err = anticc:incr("bad_cookie" .. cookies[config.cookie_name], 1)
     if not count then
-        banlist:set(cookies[COOKIE_NAME], 1, ROTATE_AFTER_SECOND * 2)
+        anticc:set("bad_cookie" .. cookies[config.cookie_name], 1, rotate_after_second * 2)
         count = 1
     end
     if count >= 1024 then
         if count == 1024 then
-            ngx.log(ngx.ERR, "client banned by bad sid")
+            ngx.log(ngx.WARN, "client banned by bad sid")
         end
         ngx.exit(444)
         return
     end
-    cookie.challenge(COOKIE_NAME, user_id, COOKIE_SID, sid)
+    cookie.challenge(config.cookie_name, user_id, config.cookie_sid_name, sid)
     return
 end
 
---if is_page then
---   local count, err = page_count:incr(remote_id, 1)
---    if not count then
---        page_count:set(remote_id, 1, 1)
---        count = 1
---    end
---    if count >= 64 then
---        if count == 64 then
---            ngx.log(ngx.ERR, "client banned by remote on page")
---        end
---        ngx.exit(444)
---        return
---    end
---    count, err = page_count:incr(network_id, 1)
---    if not count then
---        page_count:set(network_id, 1, 1)
---        count = 1
---    end
---    if count >= 48 then
---        if count == 48 then
---            ngx.log(ngx.ERR, "client banned by network on page")
---        end
---        ngx.exit(444)
---        return
---    end
---end
+count, err = anticc:incr(user_id, 1)
+if not count then
+    anticc:set(user_id, 1, 10)
+    count = 1
+end
 
-
--- counter from sid
--- if count >= 512 then
---    local count, err = banlist:incr(sid, 1)
---    if not count then
---        banlist:set(sid, 1, 3600 + math.random(0, 600))
---        count = 1
---    end
---    if count >= 9999999 then
---        if count == 9999999 then
---            ngx.log(ngx.ERR, "client banned by retry")
---        end
---        ngx.exit(444)
---        return
---    end
---    cookie.challenge(COOKIE_NAME, user_id, COOKIE_SID, sid)
---    return
--- end
-
-if (count > REQUESTS_PER_TEN_SECOND) then
-    cookie.challenge(COOKIE_NAME, user_id, COOKIE_SID, sid)
+if count >= config.requests_per_ten_second then
+    cookie.challenge(config.cookie_name, user_id, config.cookie_sid_name, sid)
     return
 end
